@@ -1,0 +1,21 @@
+=== SIMULACION LOCAL DEL PIPELINE DE DESPLIEGUE ===
+
+--- Etapa 1: acceptance-tests (mvn package) ---
+Empaquetado OK
+
+--- Etapa 2: deploy-green ---
+Desplegando nueva version en entorno GREEN...
+Entorno GREEN desplegado correctamente.
+
+--- Smoke test sobre GREEN ---
+Smoke test OK: GREEN responde correctamente.
+
+--- Conmutacion de trafico BLUE -> GREEN ---
+Trafico conmutado. GREEN es ahora la version activa.
+version=3b265550e7c0afeca2c2b4503188233c9a369f9b
+
+=== ESCENARIO DE FALLO Y ROLLBACK ===
+Simulando fallo en smoke test de una version defectuosa...
+Smoke test FALLO: GREEN no responde.
+Ejecutando rollback automatico...
+Rollback completado. Trafico se mantiene en BLUE (ultima version estable: 3b265550e7c0afeca2c2b4503188233c9a369f9b).
