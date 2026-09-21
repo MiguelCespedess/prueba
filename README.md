@@ -37,9 +37,10 @@ distintas etapas del pipeline.
 El repositorio usa **Trunk-Based Development**:
 
 - `main` es la rama principal, siempre desplegable.
-- El trabajo se realiza en ramas de vida corta (`feature/proyecto-base`,
-  `feature/pipeline-ci`, `feature/deployment-pipeline`) que se integran
-  rápidamente a `main` mediante merge.
+- Los cambios se hacen en ramas de vida corta (`feature/*`) que se integran
+  a `main` mediante Pull Request y se eliminan después del merge.
+- No se usa una rama `develop`, ya que eso corresponde a GitFlow.
+- Cada push o Pull Request a `main` dispara el pipeline de CI.
 
 ## Cómo ejecutar las pruebas localmente
 
