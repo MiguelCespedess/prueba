@@ -1,0 +1,75 @@
+name: CD - Despliegue Blue-Green con Rollback
+
+on:
+  workflow_run:
+    workflows: [ "CI - Build y Pruebas" ]
+    branches: [ "main" ]
+    types: [ completed ]
+  workflow_dispatch: {}
+
+jobs:
+  acceptance-tests:
+    name: Acceptance tests (ambiente de prueba)
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Empaquetar aplicación
+        run: mvn -B package -DskipTests
+
+      - name: Ejecutar acceptance tests (verify) en ambiente de prueba
+        run: mvn -B verify
+
+  deploy-green:
+    name: Desplegar versión GREEN (nueva)
+    needs: acceptance-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Simular despliegue del entorno GREEN
+        run: |
+          echo "Desplegando nueva versión en entorno GREEN..."
+          mkdir -p deploy/green
+          echo "version=${{ github.sha }}" > deploy/green/version.txt
+          echo "Entorno GREEN desplegado correctamente."
+
+      - name: Smoke test sobre GREEN
+        id: smoke_test
+        run: |
+          echo "Ejecutando smoke test sobre GREEN..."
+          if [ -f deploy/green/version.txt ]; then
+            echo "Smoke test OK: GREEN responde correctamente."
+            exit 0
+          else
+            echo "Smoke test FALLÓ."
+            exit 1
+          fi
+
+      - name: Conmutar tráfico de BLUE a GREEN
+        if: success()
+        run: |
+          echo "Conmutando tráfico 100% hacia GREEN..."
+          mkdir -p deploy
+          cp deploy/green/version.txt deploy/current.txt
+          echo "Tráfico conmutado. GREEN es ahora la versión activa (BLUE queda en standby)."
+
+  rollback:
+    name: Rollback automático a BLUE
+    needs: [ acceptance-tests, deploy-green ]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Revertir tráfico hacia BLUE (versión estable anterior)
+        run: |
+          echo "Fallo detectado en acceptance tests o despliegue GREEN."
+          echo "Ejecutando rollback: manteniendo tráfico en BLUE (última versión estable)."
+          echo "Rollback completado. El servicio sigue disponible sin interrupción."
